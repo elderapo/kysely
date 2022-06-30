@@ -2,6 +2,8 @@ import * as chai from 'chai'
 import * as chaiSubset from 'chai-subset'
 import { Pool } from 'pg'
 import { createPool } from 'mysql2'
+// @ts-ignore
+import * as Cursor from 'pg-cursor'
 
 chai.use(chaiSubset)
 
@@ -122,6 +124,7 @@ const DB_CONFIGS: PerDialect<KyselyConfig> = {
   postgres: {
     dialect: new PostgresDialect({
       pool: async () => new Pool(DIALECT_CONFIGS.postgres),
+      cursorImpl: Cursor,
     }),
     plugins: PLUGINS,
   },
