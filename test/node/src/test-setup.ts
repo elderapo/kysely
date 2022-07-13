@@ -98,12 +98,15 @@ if (process.env.TEST_TRANSFORMER) {
   PLUGINS.push(createNoopTransformerPlugin())
 }
 
+export const POOL_SIZE = 20
+
 export const DIALECT_CONFIGS = {
   postgres: {
     database: 'kysely_test',
     host: 'localhost',
     user: 'kysely',
     port: 5434,
+    max: POOL_SIZE,
   },
 
   mysql: {
@@ -115,6 +118,8 @@ export const DIALECT_CONFIGS = {
     // Return big numbers as strings just like pg does.
     supportBigNumbers: true,
     bigNumberStrings: true,
+
+    connectionLimit: POOL_SIZE,
   },
 
   sqlite: {
