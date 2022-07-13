@@ -98,6 +98,30 @@ for (const dialect of BUILT_IN_DIALECTS) {
           })
 
           await builder.execute()
+
+          expect(await getColumnMeta('test.a')).to.eql({
+            dataType: 'int4',
+            isAutoIncrementing: true,
+            isNullable: false,
+            hasDefaultValue: true,
+            name: 'a',
+          })
+
+          expect(await getColumnMeta('test.b')).to.eql({
+            dataType: 'int4',
+            isAutoIncrementing: false,
+            isNullable: true,
+            hasDefaultValue: false,
+            name: 'b',
+          })
+
+          expect(await getColumnMeta('test.l')).to.eql({
+            dataType: 'bool',
+            isAutoIncrementing: false,
+            isNullable: false,
+            hasDefaultValue: true,
+            name: 'l',
+          })
         })
       } else if (dialect === 'mysql') {
         it('should create a table with all data types', async () => {
@@ -159,12 +183,38 @@ for (const dialect of BUILT_IN_DIALECTS) {
           })
 
           await builder.execute()
+
+          expect(await getColumnMeta('test.a')).to.eql({
+            dataType: 'int',
+            isAutoIncrementing: true,
+            isNullable: false,
+            hasDefaultValue: false,
+            name: 'a',
+          })
+
+          expect(await getColumnMeta('test.b')).to.eql({
+            dataType: 'int',
+            isAutoIncrementing: false,
+            isNullable: true,
+            hasDefaultValue: false,
+            name: 'b',
+          })
+
+          expect(await getColumnMeta('test.k')).to.eql({
+            dataType: 'tinyint',
+            isAutoIncrementing: false,
+            isNullable: false,
+            hasDefaultValue: true,
+            name: 'k',
+          })
         })
       } else {
         it('should create a table with all data types', async () => {
           const builder = ctx.db.schema
             .createTable('test')
-            .addColumn('a', 'serial', (col) => col.primaryKey())
+            .addColumn('a', 'integer', (col) =>
+              col.primaryKey().autoIncrement().notNull()
+            )
             .addColumn('b', 'integer', (col) =>
               col
                 .references('test.a')
@@ -199,7 +249,7 @@ for (const dialect of BUILT_IN_DIALECTS) {
             sqlite: {
               sql: [
                 'create table "test"',
-                '("a" serial primary key,',
+                '("a" integer not null primary key autoincrement,',
                 '"b" integer references "test" ("a") on delete cascade on update restrict check (b < a),',
                 '"c" varchar,',
                 '"d" varchar(10),',
@@ -226,6 +276,30 @@ for (const dialect of BUILT_IN_DIALECTS) {
           })
 
           await builder.execute()
+
+          expect(await getColumnMeta('test.a')).to.eql({
+            dataType: 'INTEGER',
+            isAutoIncrementing: true,
+            isNullable: false,
+            hasDefaultValue: false,
+            name: 'a',
+          })
+
+          expect(await getColumnMeta('test.b')).to.eql({
+            dataType: 'INTEGER',
+            isAutoIncrementing: false,
+            isNullable: true,
+            hasDefaultValue: false,
+            name: 'b',
+          })
+
+          expect(await getColumnMeta('test.l')).to.eql({
+            dataType: 'boolean',
+            isAutoIncrementing: false,
+            isNullable: false,
+            hasDefaultValue: true,
+            name: 'l',
+          })
         })
       }
 
@@ -986,6 +1060,173 @@ for (const dialect of BUILT_IN_DIALECTS) {
       })
     })
 
+    describe('create schema', () => {
+      if (dialect === 'postgres' || dialect === 'mysql') {
+        beforeEach(cleanup)
+        afterEach(cleanup)
+
+        it('should create a schema', async () => {
+          const builder = ctx.db.schema.createSchema('pets')
+
+          testSql(builder, dialect, {
+            postgres: {
+              sql: `create schema "pets"`,
+              parameters: [],
+            },
+            mysql: {
+              sql: 'create schema `pets`',
+              parameters: [],
+            },
+            sqlite: NOT_SUPPORTED,
+          })
+
+          await builder.execute()
+        })
+
+        it('should create a schema if not exists', async () => {
+          const builder = ctx.db.schema.createSchema('pets').ifNotExists()
+
+          testSql(builder, dialect, {
+            postgres: {
+              sql: `create schema if not exists "pets"`,
+              parameters: [],
+            },
+            mysql: {
+              sql: 'create schema if not exists `pets`',
+              parameters: [],
+            },
+            sqlite: NOT_SUPPORTED,
+          })
+
+          await builder.execute()
+        })
+      }
+
+      async function cleanup() {
+        await ctx.db.schema.dropSchema('pets').ifExists().execute()
+      }
+    })
+
+    describe('drop schema', () => {
+      if (dialect === 'postgres' || dialect === 'mysql') {
+        beforeEach(cleanup)
+        afterEach(cleanup)
+
+        it('should drop a schema', async () => {
+          await ctx.db.schema.createSchema('pets').execute()
+
+          const builder = ctx.db.schema.dropSchema('pets')
+
+          testSql(builder, dialect, {
+            postgres: {
+              sql: `drop schema "pets"`,
+              parameters: [],
+            },
+            mysql: {
+              sql: 'drop schema `pets`',
+              parameters: [],
+            },
+            sqlite: NOT_SUPPORTED,
+          })
+
+          await builder.execute()
+        })
+
+        it('should drop a schema if exists', async () => {
+          const builder = ctx.db.schema.dropSchema('pets').ifExists()
+
+          testSql(builder, dialect, {
+            postgres: {
+              sql: `drop schema if exists "pets"`,
+              parameters: [],
+            },
+            mysql: {
+              sql: 'drop schema if exists `pets`',
+              parameters: [],
+            },
+            sqlite: NOT_SUPPORTED,
+          })
+
+          await builder.execute()
+        })
+      }
+
+      async function cleanup() {
+        await ctx.db.schema.dropSchema('pets').ifExists().execute()
+      }
+    })
+
+    describe('create type', () => {
+      if (dialect === 'postgres') {
+        beforeEach(cleanup)
+        afterEach(cleanup)
+
+        it('should create an enum type', async () => {
+          const builder = ctx.db.schema
+            .createType('species')
+            .asEnum(['cat', 'dog', 'frog'])
+
+          testSql(builder, dialect, {
+            postgres: {
+              sql: `create type "species" as enum ('cat', 'dog', 'frog')`,
+              parameters: [],
+            },
+            mysql: NOT_SUPPORTED,
+            sqlite: NOT_SUPPORTED,
+          })
+
+          await builder.execute()
+        })
+      }
+
+      async function cleanup() {
+        await ctx.db.schema.dropType('species').ifExists().execute()
+      }
+    })
+
+    describe('drop type', () => {
+      if (dialect === 'postgres') {
+        beforeEach(cleanup)
+        afterEach(cleanup)
+
+        it('should drop a type', async () => {
+          await ctx.db.schema.createType('species').execute()
+
+          const builder = ctx.db.schema.dropType('species')
+
+          testSql(builder, dialect, {
+            postgres: {
+              sql: `drop type "species"`,
+              parameters: [],
+            },
+            mysql: NOT_SUPPORTED,
+            sqlite: NOT_SUPPORTED,
+          })
+
+          await builder.execute()
+        })
+
+        it('should drop a type if exists', async () => {
+          const builder = ctx.db.schema.dropType('species').ifExists()
+
+          testSql(builder, dialect, {
+            postgres: {
+              sql: `drop type if exists "species"`,
+              parameters: [],
+            },
+            mysql: NOT_SUPPORTED,
+            sqlite: NOT_SUPPORTED,
+          })
+
+          await builder.execute()
+        })
+      }
+
+      async function cleanup() {
+        await ctx.db.schema.dropType('species').ifExists().execute()
+      }
+    })
+
     describe('alter table', () => {
       beforeEach(async () => {
         await ctx.db.schema
@@ -1308,7 +1549,7 @@ for (const dialect of BUILT_IN_DIALECTS) {
 
           await builder.execute()
 
-          expect(await getColumnMeta('test.bool_col')).to.eql({
+          expect(await getColumnMeta('test.bool_col')).to.containSubset({
             name: 'bool_col',
             isNullable: false,
             dataType:
@@ -1342,7 +1583,7 @@ for (const dialect of BUILT_IN_DIALECTS) {
 
           await builder.execute()
 
-          expect(await getColumnMeta('test.bool_col')).to.eql({
+          expect(await getColumnMeta('test.bool_col')).to.containSubset({
             name: 'bool_col',
             isNullable: false,
             dataType:
@@ -1379,7 +1620,7 @@ for (const dialect of BUILT_IN_DIALECTS) {
 
             await builder.execute()
 
-            expect(await getColumnMeta('test.bool_col')).to.eql({
+            expect(await getColumnMeta('test.bool_col')).to.containSubset({
               name: 'bool_col',
               isNullable: false,
               dataType: dialect === 'postgres' ? 'bool' : 'tinyint',
@@ -1569,8 +1810,8 @@ for (const dialect of BUILT_IN_DIALECTS) {
 
     async function getColumnMeta(ref: string): Promise<ColumnMetadata> {
       const [table, column] = ref.split('.')
-      const meta = await ctx.db.introspection.getMetadata()
-      const tableMeta = meta.tables.find((it) => it.name === table)
+      const tables = await ctx.db.introspection.getTables()
+      const tableMeta = tables.find((it) => it.name === table)
       return tableMeta!.columns.find((it) => it.name === column)!
     }
   })

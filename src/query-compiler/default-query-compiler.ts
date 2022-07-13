@@ -34,10 +34,7 @@ import { ReferenceNode } from '../operation-node/reference-node.js'
 import { ReferencesNode } from '../operation-node/references-node.js'
 import { ReturningNode } from '../operation-node/returning-node.js'
 import { SelectAllNode } from '../operation-node/select-all-node.js'
-import {
-  SelectModifier,
-  SelectQueryNode,
-} from '../operation-node/select-query-node.js'
+import { SelectQueryNode } from '../operation-node/select-query-node.js'
 import { SelectionNode } from '../operation-node/selection-node.js'
 import { TableNode } from '../operation-node/table-node.js'
 import { PrimaryKeyConstraintNode } from '../operation-node/primary-constraint-node.js'
@@ -82,6 +79,12 @@ import { DefaultValueNode } from '../operation-node/default-value-node.js'
 import { OnNode } from '../operation-node/on-node.js'
 import { ValuesNode } from '../operation-node/values-node.js'
 import { CommonTableExpressionNameNode } from '../operation-node/common-table-expression-name-node.js'
+import {
+  SelectModifier,
+  SelectModifierNode,
+} from '../operation-node/select-modifier-node.js'
+import { CreateTypeNode } from '../operation-node/create-type-node.js'
+import { DropTypeNode } from '../operation-node/drop-type-node.js'
 
 export class DefaultQueryCompiler
   extends OperationNodeVisitor
@@ -134,8 +137,8 @@ export class DefaultQueryCompiler
       this.append(' ')
     }
 
-    if (node.distinct) {
-      this.append('distinct')
+    if (node.frontModifiers && node.frontModifiers.length > 0) {
+      this.compileList(node.frontModifiers, ' ')
       this.append(' ')
     }
 
@@ -186,11 +189,9 @@ export class DefaultQueryCompiler
       this.visitNode(node.offset)
     }
 
-    if (node.modifiers) {
-      node.modifiers.forEach((modifier) => {
-        this.append(' ')
-        this.append(SELECT_MODIFIER_SQL[modifier])
-      })
+    if (node.endModifiers && node.endModifiers.length > 0) {
+      this.append(' ')
+      this.compileList(node.endModifiers, ' ')
     }
 
     if (wrapInParens) {
@@ -1091,6 +1092,34 @@ export class DefaultQueryCompiler
     this.visitNode(node.defaultValue)
   }
 
+  protected override visitSelectModifier(node: SelectModifierNode): void {
+    if (node.rawModifier) {
+      this.visitNode(node.rawModifier)
+    } else {
+      this.append(SELECT_MODIFIER_SQL[node.modifier!])
+    }
+  }
+
+  protected override visitCreateType(node: CreateTypeNode): void {
+    this.append('create type ')
+    this.visitNode(node.name)
+
+    if (node.enum) {
+      this.append(' as enum ')
+      this.visitNode(node.enum)
+    }
+  }
+
+  protected override visitDropType(node: DropTypeNode): void {
+    this.append('drop type ')
+
+    if (node.ifExists) {
+      this.append('if exists ')
+    }
+
+    this.visitNode(node.name)
+  }
+
   protected append(str: string): void {
     this.#sql += str
   }
@@ -1140,6 +1169,7 @@ const SELECT_MODIFIER_SQL: Readonly<Record<SelectModifier, string>> = freeze({
   ForShare: 'for share',
   NoWait: 'nowait',
   SkipLocked: 'skip locked',
+  Distinct: 'distinct',
 })
 
 const JOIN_TYPE_SQL: Readonly<Record<JoinType, string>> = freeze({

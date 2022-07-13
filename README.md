@@ -5,21 +5,20 @@
 
 # [Kysely](https://koskimas.github.io/kysely/index.html)
 
-A type-safe and autocompletion-friendly typescript SQL query builder. Inspired by [knex](http://knexjs.org/).
-Mainly developed for [node.js](https://nodejs.org/en/) but also runs on [deno](https://deno.land/) and
-in the browser.
+Kysely (pronounce “Key-Seh-Lee”) is a type-safe and autocompletion-friendly typescript SQL query builder. Inspired by
+[knex](http://knexjs.org/). Mainly developed for [node.js](https://nodejs.org/en/) but also runs on [deno](https://deno.land/)
+and in the browser.
 
 ![](https://github.com/koskimas/kysely/blob/master/assets/demo.gif)
 
 Kysely makes sure you only refer to tables and columns that are visible to the part of the query
-you are writing. The result type only has the selected columns with correct types and aliases. As an
+you're writing. The result type only has the selected columns with correct types and aliases. As an
 added bonus you get autocompletion for all that stuff.
 
-As you can see in the gif above, through the pure magic of modern typescript, Kysely is even able to parse
+As shown in the gif above, through the pure magic of modern typescript, Kysely is even able to parse
 the alias given to `pet.name` and add the `pet_name` column to the result row type. Kysely is able to infer
 column names, aliases and types from selected subqueries, joined subqueries, `with` statements and pretty
-much anything you can think of. Typescript is always there for you offering completions and making sure
-you build a valid query.
+much anything you can think of.
 
 Of course there are cases where things cannot be typed at compile time, and Kysely offers escape
 hatches for these situations. See the [sql template tag](https://koskimas.github.io/kysely/modules.html#sql) 
@@ -34,6 +33,7 @@ You can find a more thorough introduction [here](https://www.jakso.me/blog/kysel
 
 - [Installation](#installation)
 - [Minimal example](#minimal-example)
+- [Generating types](#generating-types)
 - [Query examples](#query-examples)
 - [Recipes](https://github.com/koskimas/kysely/tree/master/recipes)
 - [Migrations](#migrations)
@@ -166,6 +166,11 @@ type InsertablePerson = Insertable<PersonTable>
 type UpdateablePerson = Updateable<PersonTable>
 ```
 
+# Generating types
+
+If you want to generate the table types automatically from the database schema please
+check out [this awesome project](https://github.com/RobinBlomberg/kysely-codegen).
+
 # Query examples
 
 ## Select queries
@@ -208,10 +213,11 @@ export async function down(db: Kysely<any>): Promise<void> {
 }
 ```
 
-The `up` function is called when you update your database schema to next version and `down`
+The `up` function is called when you update your database schema to the next version and `down`
 when you go back to previous version. The only argument for the functions is an instance of
-`Kysely<any>`. It's important to use `Kysely<any>` and not `Kysely<YourDatabase>`. Migrations
-should never depend on the current code of your app because they need to work even when the app
+`Kysely<any>`. It's important to use `Kysely<any>` and not `Kysely<YourDatabase>`. 
+
+Migrations should never depend on the current code of your app because they need to work even when the app
 changes. Migrations need to be "frozen in time".
 
 The migrations can use the [Kysely.schema](https://koskimas.github.io/kysely/classes/SchemaModule.html)
