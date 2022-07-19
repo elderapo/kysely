@@ -29,12 +29,15 @@ import {
   Logger,
   Generated,
   sql,
+  ColumnType,
+  InsertObject,
 } from '../../../'
 import Database = require('better-sqlite3')
 
 export interface Person {
   id: Generated<number>
   first_name: string | null
+  middle_name: ColumnType<string | null, string | undefined, string | undefined>
   last_name: string | null
   gender: 'male' | 'female' | 'other'
 }
@@ -60,7 +63,7 @@ export interface Database {
   'toy_schema.toy': Toy
 }
 
-interface PersonInsertParams extends Omit<Person, 'id'> {
+interface PersonInsertParams extends InsertObject<Database, 'person'> {
   pets?: PetInsertParams[]
 }
 
@@ -293,6 +296,8 @@ async function connect(config: KyselyConfig): Promise<Kysely<Database>> {
       await sql`select 1`.execute(db)
       return db
     } catch (error) {
+      console.error(error)
+
       if (db) {
         await db.destroy().catch((error) => error)
       }
